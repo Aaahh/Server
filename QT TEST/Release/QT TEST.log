@@ -1,0 +1,30 @@
+﻿Build started 9/2/2014 9:41:13 PM.
+     1>Project "C:\Users\phXL\Documents\Visual Studio 2012\Projects\QT SERVER\QT TEST\QT TEST.vcxproj" on node 2 (Rebuild target(s)).
+     1>CustomBuild:
+         Moc'ing qttest.h...
+         Uic'ing qttest.ui...
+         Rcc'ing qttest.qrc...
+     1>RCC : warning : No resources in 'C:\Users\phXL\Documents\Visual Studio 2012\Projects\QT SERVER\QT TEST\qttest.qrc'.
+         
+       ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /I.\GeneratedFiles /I. /IF:\Installs\Qt\5.3\msvc2010_opengl\include /I.\GeneratedFiles\Release /IF:\Installs\Qt\5.3\msvc2010_opengl\include\QtCore /IF:\Installs\Qt\5.3\msvc2010_opengl\include\QtGui /IF:\Installs\Qt\5.3\msvc2010_opengl\include\QtWidgets /nologo /W1 /WX- /O2 /Oy- /D UNICODE /D WIN32 /D WIN64 /D QT_DLL /D QT_NO_DEBUG /D NDEBUG /D QT_CORE_LIB /D QT_GUI_LIB /D QT_WIDGETS_LIB /Gm- /EHsc /MD /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Release\\" /Fd"Release\vc100.pdb" /Gd /TP /analyze- /errorReport:prompt GeneratedFiles\qrc_qttest.cpp
+         qrc_qttest.cpp
+         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /I.\GeneratedFiles /I. /IF:\Installs\Qt\5.3\msvc2010_opengl\include /I.\GeneratedFiles\Release /IF:\Installs\Qt\5.3\msvc2010_opengl\include\QtCore /IF:\Installs\Qt\5.3\msvc2010_opengl\include\QtGui /IF:\Installs\Qt\5.3\msvc2010_opengl\include\QtWidgets /nologo /W1 /WX- /O2 /Oy- /D UNICODE /D WIN32 /D WIN64 /D QT_DLL /D QT_NO_DEBUG /D NDEBUG /D QT_CORE_LIB /D QT_GUI_LIB /D QT_WIDGETS_LIB /Gm- /EHsc /MD /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Release\\" /Fd"Release\vc100.pdb" /Gd /TP /analyze- /errorReport:prompt GeneratedFiles\Release\moc_qttest.cpp main.cpp qttest.cpp
+         moc_qttest.cpp
+         main.cpp
+         qttest.cpp
+         Generating Code...
+     1>c:\users\phxl\documents\visual studio 2012\projects\qt server\qt test\main.cpp(161): warning C4715: 'minitialize' : not all control paths return a value
+       Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"C:\Users\phXL\Documents\Visual Studio 2012\Projects\QT SERVER\Win32\Release\\QT TEST.exe" /NOLOGO /LIBPATH:F:\Installs\Qt\5.3\msvc2010_opengl\lib qtmain.lib Qt5Core.lib Qt5Gui.lib Qt5Widgets.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /ManifestFile:"Release\QT TEST.exe.intermediate.manifest" /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /PDB:"C:\Users\phXL\Documents\Visual Studio 2012\Projects\QT SERVER\Win32\Release\QT TEST.pdb" /SUBSYSTEM:WINDOWS /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:\Users\phXL\Documents\Visual Studio 2012\Projects\QT SERVER\Win32\Release\QT TEST.lib" /MACHINE:X86 Release\qrc_qttest.obj
+         Release\moc_qttest.obj
+         Release\main.obj
+         Release\qttest.obj
+         QT TEST.vcxproj -> C:\Users\phXL\Documents\Visual Studio 2012\Projects\QT SERVER\Win32\Release\QT TEST.exe
+       Manifest:
+         C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\bin\mt.exe /nologo /verbose /outputresource:"C:\Users\phXL\Documents\Visual Studio 2012\Projects\QT SERVER\Win32\Release\\QT TEST.exe;#1" /manifest "Release\QT TEST.exe.intermediate.manifest"
+     1>Done Building Project "C:\Users\phXL\Documents\Visual Studio 2012\Projects\QT SERVER\QT TEST\QT TEST.vcxproj" (Rebuild target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:08.69
