@@ -16,7 +16,7 @@ int lastclient=0;
 SOCKET ListenSocket = INVALID_SOCKET;
 SOCKET ClientSocket = INVALID_SOCKET;
 
-#define DEFAULT_BUFLEN 512
+#define DEFAULT_BUFLEN 1024
 #define DEFAULT_PORT "10150"
 
 WSADATA wsaData;
@@ -29,9 +29,10 @@ int iSendResult;
 char recvbuf[DEFAULT_BUFLEN];
 int recvbuflen = DEFAULT_BUFLEN;
 int rows=0;
+int verbose = 0;
 
-int msend(char msendbuf[512]);
-int msend(LPVOID pointerToObject, char msendbuf[512]);
+int msend(char msendbuf[1024]);
+int msend(LPVOID pointerToObject, char msendbuf[1024]);
 char* mrecv(bool show);
 char* mrecv(bool show, LPVOID pointerToObject);
 int printm(char *inp);
@@ -45,40 +46,44 @@ int scroll(void);
 int mexit();
 int change_client(int client);
 void mbroadcast(char* mess);
-void list_remove(LPVOID pointer, int number);
+char* recv_client(LPVOID pointerToObject);
 
 struct _client
 {
-	void list_add(LPVOID pointer) //once called by "/name", adds an item to listWidget representing the client
-	{
-		QTTEST* p = static_cast<QTTEST*>(pointer);
-		char a[100];
-		itoa(currentclient, a, 10);
-		strcat(a, "  :  ");
-		char n[100];
-		strcpy(n, name.c_str());
-		strcat(a, n);
-		p->ui.listWidget->addItem(new QListWidgetItem(a));
-		rows++;
-	}
+    void list_add(LPVOID pointer) //once called by "/name", adds an item to listWidget representing the client
+    {
+        QTTEST* p = static_cast<QTTEST*>(pointer);
+        char a[100];
+        itoa(currentclient, a, 10);
+        strcat(a, "  :  ");
+        char n[100];
+        strcpy(n, name.c_str());
+        strcat(a, n);
+        p->ui.listWidget->addItem(new QListWidgetItem(a));
+        rows++;
+    }
 
-	void list_remove(LPVOID pointer, int number)
-	{
-		QTTEST* p = static_cast<QTTEST*>(pointer);
-		p->ui.listWidget->takeItem(number);
-	}
+    void list_remove(LPVOID pointer, int number)
+    {
+        QTTEST* p = static_cast<QTTEST*>(pointer);
+        p->ui.listWidget->takeItem(number);
+    }
 
     bool con;
+	bool block;
     sockaddr_in addr;	//Client info like ip address
     SOCKET cs;		    //Client socket
     fd_set set;			//used to check if there is data in the socket
+	int address_length;
+	char template_name[15];
     std::string ip;		//IP is stored here once the server receives a "/ip" from the client upon connection
     std::string name;	//Client's username is stored here with "/name", like the IP
-	int client;			//socket number, as in the array identifier of the client[100] class
+    int client;			//socket number, as in the array identifier of the client[100] class
     int i;				//any piece of additional info
+
 } client[100];
 
-int msend(char msendbuf[512])	// Send a message
+int msend(char msendbuf[1024])	// Send a message
 {
     if (strncmp(msendbuf,"Server> /exit",(strlen(msendbuf))) == 0) {
         mexit();
@@ -146,40 +151,40 @@ int msend(char msendbuf[512])	// Send a message
         printm("/ip_enum");
         printm("/meterpreter");
     }
-		
-	if (strncmp(msendbuf, "Server> /disconnect", 35)==0)
-	{
-		std::cout<<"DISCONNECT CAUSED...\n";
-		for (int cm=1; cm < 100; cm++) {
+
+    if (strncmp(msendbuf, "Server> /disconnect", 35)==0)
+    {
+        std::cout<<"DISCONNECT CAUSED...\n";
+        for (int cm=1; cm < 100; cm++) {
             SOCKET cn=client[cm].cs;
             if (cn==ClientSocket) {
-				disconnect(cm);
+                disconnect(cm);
             }
         }
-	}
+    }
 
-	if (strncmp(msendbuf, "Server> /broadcast", 18)==0)
-	{
-		char sends[1000];
-		strcpy(sends, "Server> ");
-		strcat(sends, &msendbuf[19]);
-		mbroadcast(sends);
-	}
+    if (strncmp(msendbuf, "Server> /broadcast", 18)==0)
+    {
+        char sends[1000];
+        strcpy(sends, "Server> ");
+        strcat(sends, &msendbuf[19]);
+        mbroadcast(sends);
+    }
 
-    int iResult3 = send( ClientSocket, msendbuf, 512, 0 );
+    int iResult3 = send( ClientSocket, msendbuf, 1024, 0 );
     if (iResult3 == SOCKET_ERROR) {
         printm("send failed with error: %d\n", WSAGetLastError());
-		for (int cm=1; cm < 100; cm++) {
+        for (int cm=1; cm < 100; cm++) {
             SOCKET cn=client[cm].cs;
             if (cn==ClientSocket) {
-				disconnect(cm);
+                disconnect(cm);
             }
         }
-	}
-        return 1;
+    }
+    return 1;
 }
 
-int msend(LPVOID pointerToObject, char msendbuf[512])	// Send a message
+int msend(LPVOID pointerToObject, char msendbuf[1024])	// Send a message
 {
     if (strncmp(msendbuf,"Server> /exit",(strlen(msendbuf))) == 0) {
         mexit();
@@ -247,42 +252,42 @@ int msend(LPVOID pointerToObject, char msendbuf[512])	// Send a message
         printm("/ip_enum");
         printm("/meterpreter");
     }
-		
-	if (strncmp(msendbuf, "Server> /disconnect", 35)==0)
-	{
-		std::cout<<"DISCONNECT CAUSED...\n";
-		for (int cm=1; cm < 100; cm++) {
+
+    if (strncmp(msendbuf, "Server> /disconnect", 35)==0)
+    {
+        std::cout<<"DISCONNECT CAUSED...\n";
+        for (int cm=1; cm < 100; cm++) {
             SOCKET cn=client[cm].cs;
             if (cn==ClientSocket) {
-				disconnect(cm);
+                disconnect(cm);
             }
         }
-	}
+    }
 
-	if (strncmp(msendbuf, "Server> /broadcast", 18)==0)
-	{
-		char sends[1000];
-		strcpy(sends, "Server> ");
-		strcat(sends, &msendbuf[19]);
-		mbroadcast(sends);
-	}
+    if (strncmp(msendbuf, "Server> /broadcast", 18)==0)
+    {
+        char sends[1000];
+        strcpy(sends, "Server> ");
+        strcat(sends, &msendbuf[19]);
+        mbroadcast(sends);
+    }
 
-    int iResult3 = send( ClientSocket, msendbuf, 512, 0 );
+    int iResult3 = send( ClientSocket, msendbuf, 1024, 0 );
     if (iResult3 == SOCKET_ERROR) {
         printm("send failed with error: %d\n", WSAGetLastError());
-		for (int cm=1; cm < 100; cm++) {
+        for (int cm=1; cm < 100; cm++) {
             SOCKET cn=client[cm].cs;
             if (cn==ClientSocket) {
-				disconnect(pointerToObject, cm);
+                disconnect(pointerToObject, cm);
             }
         }
-	}
-        return 1;
+    }
+    return 1;
 }
 
 char* mrecv(bool show) //Recieve a message
 {
-    int iResult2 = recv(ClientSocket, recvbuf, 512, 0);
+    int iResult2 = recv(ClientSocket, recvbuf, 1024, 0);
     if (iResult2 > 0) {
         if ((strncmp(recvbuf,"/",1)) != 0) {
             printm(recvbuf);
@@ -327,10 +332,10 @@ char* mrecv(bool show) //Recieve a message
     else  {
         printm("recv failed with error: %d\n", WSAGetLastError());
         printm("Client must have disconnected. Please select a new client.");
-		for (int cm=1; cm < 100; cm++) {
+        for (int cm=1; cm < 100; cm++) {
             SOCKET cn=client[cm].cs;
             if (cn==ClientSocket) {
-				disconnect(cm);
+                disconnect(cm);
             }
         }
         return "1";
@@ -340,7 +345,7 @@ char* mrecv(bool show) //Recieve a message
 
 char* mrecv(bool show, LPVOID pointerToObject) //Recieve a message and print it to the listWidget in the GUI
 {
-    int iResult2 = recv(ClientSocket, recvbuf, 512, 0);
+    int iResult2 = recv(ClientSocket, recvbuf, 1024, 0);
     if (iResult2 > 0) {
         if ((strncmp(recvbuf,"/",1)) != 0) {
             printm(recvbuf, pointerToObject);
@@ -358,7 +363,7 @@ char* mrecv(bool show, LPVOID pointerToObject) //Recieve a message and print it 
             strcpy(prin2,"client[clientnumber].name: ");
             strcat(prin2,client[clientnumber].name.c_str());
             printm(prin2,FOREGROUND_GREEN | FOREGROUND_BLUE);
-			client[currentclient].list_add(pointerToObject);
+            client[currentclient].list_add(pointerToObject);
         }
         if (strncmp(recvbuf,"/alert",5) == 0) {
             char *message=&recvbuf[7];
@@ -386,12 +391,12 @@ char* mrecv(bool show, LPVOID pointerToObject) //Recieve a message and print it 
     else  {
         printm("recv failed with error: %d\n", WSAGetLastError());
         printm("Client must have disconnected. Please select a new client.");
-		for (int cm=1; cm < 100; cm++) {
+        for (int cm=1; cm < 100; cm++) {
             SOCKET cn=client[cm].cs;
             if (cn==ClientSocket) {
-				disconnect(pointerToObject, cm);
+                disconnect(pointerToObject, cm);
             }
-		}
+        }
         return "1";
     }
     return recvbuf;
@@ -413,8 +418,8 @@ int printm(char *inp) { //append to the custom scrolling console
 
 int printm(char *inp, LPVOID pointerToObject) { //append to the custom scrolling console AND to the GUI
 
-	QTTEST* p = static_cast<QTTEST*>(pointerToObject);
-	p->ui.textBrowser->append(inp);
+    QTTEST* p = static_cast<QTTEST*>(pointerToObject);
+    p->ui.textBrowser->append(inp);
 
     CONSOLE_SCREEN_BUFFER_INFO SBInfo;
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -558,61 +563,145 @@ int mexit()
 void disconnect(int on) //this is called by the low level funtions
 {
 
-	closesocket(client[on].cs);
-	client[on].con = false;
-	std::cout<<"CLOSED SOCKET: "<<client[on].cs<<"\n";
+    closesocket(client[on].cs);
+    client[on].con = false;
+    std::cout<<"CLOSED SOCKET: "<<client[on].cs<<"\n";
 
 }
 
 void disconnect(LPVOID pointerToObject, int on) //this is called by the low level funtions
 {
 
-	closesocket(client[on].cs);
-	client[on].con = false;
-	client[on].cs = 0;
-	std::cout<<"CLOSED SOCKET: "<<client[on].cs<<"\n";
-	QTTEST* p = static_cast<QTTEST*>(pointerToObject);
-	std::cout<<"ROWS: "<<rows-1<<"\n";
-	for (int r = 0; r<=rows-1; r++)	//rows starts at 0. So once a row is added, the number of rows is 1. Since we want to loop from all rows (0 through current number of rows), r must be rows - 1
+    closesocket(client[on].cs);
+    client[on].con = false;
+    client[on].cs = 0;
+	if (verbose==1)
 	{
-		std::cout<<"LOOKING FOR: "<<on<<" IN "<<rows<<" ROWS.\n";
-		std::string e = p->ui.listWidget->item(r)->text().toStdString();
-		char tab2[1024];
-		strcpy(tab2, e.c_str());
-		std::cout<<"tab2[0]: "<<tab2[0]<<"\n";
-		if ((atoi(&tab2[0]))==on) //compare the string we're searching for to the string presented in this iteration
-		{
-			std::cout<<on<<" FOUND IN ROW: "<<r<<"\n";
-			p->ui.listWidget->takeItem(r);	//r, because r is equal to the row number in which "on" was found
-			rows--;
-		}
+		std::cout<<"CLOSED SOCKET: "<<client[on].cs<<"\n";
 	}
+    QTTEST* p = static_cast<QTTEST*>(pointerToObject);
+	if (verbose==1)
+	{
+		std::cout<<"ROWS: "<<rows-1<<"\n";
+	}
+    for (int r = 0; r<=rows-1; r++)	//rows starts at 0. So once a row is added, the number of rows is 1. Since we want to loop from all rows (0 through current number of rows), r must be rows - 1
+    {
+		if (verbose==1) 
+		{
+			std::cout<<"LOOKING FOR: "<<on<<" IN "<<rows<<" ROWS.\n";
+		}
+        std::string e = p->ui.listWidget->item(r)->text().toStdString();
+        char tab2[1024];
+        strcpy(tab2, e.c_str());
+		if (verbose==1)
+		{
+			std::cout<<"tab2[0]: "<<tab2[0]<<"\n";
+		}
+        if ((atoi(&tab2[0]))==on) //compare the string we're searching for to the string presented in this iteration
+        {
+			if (verbose==1)
+			{
+				std::cout<<on<<" FOUND IN ROW: "<<r<<"\n";
+			}
+            p->ui.listWidget->takeItem(r);	//r, because r is equal to the row number in which "on" was found
+            rows--;
+        }
+    }
 }
 
 int change_client(int num)
 {
-	ClientSocket=client[num].cs;
-	std::cout<<"Connected to: "<<num<<" AT: "<<client[num].cs<<"\n";
-	return num;
+    ClientSocket=client[num].cs;
+	if (verbose==1)
+	{
+		std::cout<<"Connected to: "<<num<<" AT: "<<client[num].cs<<"\n";
+	}
+    return num;
 }
 
 void mbroadcast(char* mess)
 {
-	SOCKET oldSocket = ClientSocket;
-	for (int cm=1; cm < 100; cm++) {
-            SOCKET cn=client[cm].cs;
-            if (cn>0) {
-				ClientSocket = cn;
-				msend(mess);
-            }
+    SOCKET oldSocket = ClientSocket;
+    for (int cm=1; cm < 100; cm++) {
+        SOCKET cn=client[cm].cs;
+        if (cn>0) {
+            ClientSocket = cn;
+            msend(mess);
         }
-	ClientSocket = oldSocket;
+    }
+    ClientSocket = oldSocket;
 }
 
-void list_remove(LPVOID pointer, int number)
-	{
-		QTTEST* p = static_cast<QTTEST*>(pointer);
-		QListWidgetItem* array = p->ui.listWidget->item(number);
-		QList<QListWidgetItem *> items = p->ui.listWidget->findItems(QString("*"), Qt::MatchWrap | Qt::MatchWildcard);
-		QVector<QListWidgetItem *> vectorA = QVector<QListWidgetItem *>::fromList(items);
-	}
+char* recv_client(LPVOID pointerToObject)
+{
+    char recvbuf[1024];
+
+    for(int i=1; i<100; i++)
+    {
+		if (verbose == -1)
+		{
+			std::cout<<"i = "<<i<<" CON = "<<client[i].con<<"\n";
+		}
+        if((client[i].con)&&(!client[i].block))		//valid slot,i.e a client has parked here
+        {
+			while (true)
+			{
+			client[i].block=true;
+			int e = recv(client[i].cs,recvbuf,1024,0);
+			if (verbose == 1)
+			{
+				std::cout<<"E = "<<e<<"\n";
+			}
+			if (e==-1)
+			{
+				if (verbose == 1)
+				{
+					std::cout<<"DISCONNECT\n";
+				}
+				disconnect(pointerToObject, i);
+				return "1";
+			}
+            if(e>0)
+            {
+                if ((strncmp(recvbuf,"/",1)) != 0) {
+                    printm(recvbuf, pointerToObject);
+                }
+                if (strncmp(recvbuf,"/ip",3) == 0) {
+                    client[clientnumber].ip=&recvbuf[4];
+                    char prin[80];
+                    strcpy(prin,"client[clientnumber].ip: ");
+                    strcat(prin,client[clientnumber].ip.c_str());
+                    printm(prin,FOREGROUND_BLUE);
+                }
+                if (strncmp(recvbuf,"/name",5) == 0) {
+                    client[clientnumber].name=&recvbuf[6];
+                    char prin2[80];
+                    strcpy(prin2,"client[clientnumber].name: ");
+                    strcat(prin2,client[clientnumber].name.c_str());
+                    printm(prin2,FOREGROUND_GREEN | FOREGROUND_BLUE);
+                    client[currentclient].list_add(pointerToObject);
+                }
+                if (strncmp(recvbuf,"/alert",5) == 0) {
+                    char *message=&recvbuf[7];
+                    char prin2[80];
+                    strcpy(prin2,client[clientnumber].name.c_str());
+                    strcat(prin2,": ");
+                    strcat(prin2, message);
+                    printm(prin2,FOREGROUND_RED);
+                }
+                if (strncmp(recvbuf,"Client> /alert",14) == 0) {
+                    char *message=&recvbuf[15];
+                    char prin2[80];
+                    strcpy(prin2,client[clientnumber].name.c_str());
+                    strcat(prin2,": ");
+                    strcat(prin2, message);
+                    printm(prin2,FOREGROUND_RED);
+                }
+
+                
+
+            }
+		}
+        }
+    }
+}

@@ -12,11 +12,12 @@
 #include "Header.h"
 
 int ServerMain(LPVOID pointerToObject);
+int yes = 0;
 
 DWORD WINAPI ChatFunc(LPVOID randparam)
 {
     ServerMain(randparam);
-	return 0;
+    return 0;
 }
 
 HANDLE hChatThread;
@@ -24,11 +25,11 @@ DWORD dwChatThreadId;
 
 int main(int argc, char *argv[])
 {
-	QApplication a(argc, argv);
-	QTTEST w;
-	w.show();
-	hChatThread = CreateThread(NULL,0,ChatFunc,&w,0,&dwChatThreadId);
-	return a.exec();
+    QApplication a(argc, argv);
+    QTTEST w;
+    w.show();
+    hChatThread = CreateThread(NULL,0,ChatFunc,&w,0,&dwChatThreadId);
+    return a.exec();
 }
 
 #undef UNICODE
@@ -43,8 +44,10 @@ char *vir = "true";
 DWORD WINAPI recvfunc(LPVOID pointerToObject)
 {
     while (true) {
-        ClientSocket=client[currentclient].cs;
-        if (strcmp(mrecv(true, pointerToObject), "1") == 0) {
+		char* bal = recv_client(pointerToObject);
+		std::cout<<"BAL: "<<bal<<"\n";
+        if (strncmp( bal, "1", 1) == 0) {
+			std::cout<<"RETURNED PROPERLY!\n";
             return 1;
         }
     }
@@ -57,7 +60,7 @@ int ServerMain(LPVOID pointerToObject)
     HANDLE hRecvThread;
     DWORD dwRecvThreadId;
 
-	AllocConsole() ;
+    AllocConsole() ;
     AttachConsole( GetCurrentProcessId() ) ;
     freopen( "CON", "w", stdout ) ;
 
@@ -73,25 +76,25 @@ int ServerMain(LPVOID pointerToObject)
         printm(sockprint);
         GoToXY(0,23);
         if (ClientSocket == INVALID_SOCKET) {
-			std::cout<<"accept failed with error: "<<WSAGetLastError()<<"\n";
-			closesocket(ClientSocket);
-			WSACleanup();
-			minitialize();
+            std::cout<<"accept failed with error: "<<WSAGetLastError()<<"\n";
+            closesocket(ClientSocket);
+            WSACleanup();
+            minitialize();
         }
-		    client[sock].cs=ClientSocket;
-		    client[sock].con=true;
-			client[sock].i=clientnumber;
-			client[sock].client=sock;
-		    lastclient=clientnumber;
-		    hRecvThread = CreateThread(NULL,0,recvfunc,pointerToObject,0,&dwRecvThreadId);
-			clientnumber++;
-		    currentclient=clientnumber;
+        client[sock].cs=ClientSocket;
+        client[sock].con=true;
+        client[sock].i=clientnumber;
+        client[sock].client=sock;
+        lastclient=clientnumber;
+			hRecvThread = CreateThread(NULL,0,recvfunc,pointerToObject,0,&dwRecvThreadId);
+        clientnumber++;
+        currentclient=clientnumber;
     }
 
-	while(true)
-	{
-		    Sleep(1000000);
-	}
+    while(true)
+    {
+        Sleep(1000000);
+    }
 
     // shutdown the connection since we're done
     mshutdown();
@@ -158,3 +161,6 @@ int minitialize()	//initialize the winsock server
 
 
 }
+
+
+/*--------------------TEST FUNCTIONS--------------------*/
