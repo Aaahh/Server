@@ -31,6 +31,8 @@ public slots: void on_beepButton_clicked();
 public slots: void on_cmdButton_clicked();
 public slots: void on_cmdEdit_returnPressed();
 public slots: void on_listWidget_itemSelectionChanged();
+public slots: void on_generateButton_clicked();
+public slots: void on_generateEdit_returnPressed();
 
 };
 

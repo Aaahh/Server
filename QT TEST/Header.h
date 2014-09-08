@@ -7,7 +7,10 @@
 #include <iostream>
 #include <string>
 #include <conio.h>
+#include <fstream>
 #include "qttest.h"
+
+#pragma comment(lib, "advapi32.lib") //For token interaction
 
 int clientnumber=0;
 int currentclient=0;
@@ -33,8 +36,6 @@ int verbose = 0;
 
 int msend(char msendbuf[1024]);
 int msend(LPVOID pointerToObject, char msendbuf[1024]);
-char* mrecv(bool show);
-char* mrecv(bool show, LPVOID pointerToObject);
 int printm(char *inp);
 int printm(char *inp, DWORD color);
 int printm(char *inp, LPVOID pointerToObject);
@@ -47,6 +48,8 @@ int mexit();
 int change_client(int client);
 void mbroadcast(char* mess);
 char* recv_client(LPVOID pointerToObject);
+std::string enc(std::string data);
+std::string readTextFromFile(char* filename);
 
 struct _client
 {
@@ -285,121 +288,160 @@ int msend(LPVOID pointerToObject, char msendbuf[1024])	// Send a message
     return 1;
 }
 
-char* mrecv(bool show) //Recieve a message
+void disconnect(int on) //this is called by the low level funtions
 {
-    int iResult2 = recv(ClientSocket, recvbuf, 1024, 0);
-    if (iResult2 > 0) {
-        if ((strncmp(recvbuf,"/",1)) != 0) {
-            printm(recvbuf);
-        }
-        if (strncmp(recvbuf,"/ip",3) == 0) {
-            client[clientnumber].ip=&recvbuf[4];
-            char prin[80];
-            strcpy(prin,"client[clientnumber].ip: ");
-            strcat(prin,client[clientnumber].ip.c_str());
-            printm(prin,FOREGROUND_BLUE);
-        }
-        if (strncmp(recvbuf,"/name",5) == 0) {
-            client[clientnumber].name=&recvbuf[6];
-            char prin2[80];
-            strcpy(prin2,"client[clientnumber].name: ");
-            strcat(prin2,client[clientnumber].name.c_str());
-            printm(prin2,FOREGROUND_GREEN | FOREGROUND_BLUE);
-        }
-        if (strncmp(recvbuf,"/alert",5) == 0) {
-            char *message=&recvbuf[7];
-            char prin2[80];
-            strcpy(prin2,client[clientnumber].name.c_str());
-            strcat(prin2,": ");
-            strcat(prin2, message);
-            printm(prin2,FOREGROUND_RED);
-        }
-        if (strncmp(recvbuf,"Client> /alert",14) == 0) {
-            char *message=&recvbuf[15];
-            char prin2[80];
-            strcpy(prin2,client[clientnumber].name.c_str());
-            strcat(prin2,": ");
-            strcat(prin2, message);
-            printm(prin2,FOREGROUND_RED);
-        }
-    }
-    else if (iResult2 == 0) {
-        printf("Connection closing...\n");
-        closesocket(ClientSocket);
-        WSACleanup();
-        return "1";
-    }
-    else  {
-        printm("recv failed with error: %d\n", WSAGetLastError());
-        printm("Client must have disconnected. Please select a new client.");
-        for (int cm=1; cm < 100; cm++) {
-            SOCKET cn=client[cm].cs;
-            if (cn==ClientSocket) {
-                disconnect(cm);
-            }
-        }
-        return "1";
-    }
-    return recvbuf;
+
+    closesocket(client[on].cs);
+    client[on].con = false;
+    std::cout<<"CLOSED SOCKET: "<<client[on].cs<<"\n";
+
 }
 
-char* mrecv(bool show, LPVOID pointerToObject) //Recieve a message and print it to the listWidget in the GUI
+void disconnect(LPVOID pointerToObject, int on) //this is called by the low level funtions
 {
-    int iResult2 = recv(ClientSocket, recvbuf, 1024, 0);
-    if (iResult2 > 0) {
-        if ((strncmp(recvbuf,"/",1)) != 0) {
-            printm(recvbuf, pointerToObject);
-        }
-        if (strncmp(recvbuf,"/ip",3) == 0) {
-            client[clientnumber].ip=&recvbuf[4];
-            char prin[80];
-            strcpy(prin,"client[clientnumber].ip: ");
-            strcat(prin,client[clientnumber].ip.c_str());
-            printm(prin,FOREGROUND_BLUE);
-        }
-        if (strncmp(recvbuf,"/name",5) == 0) {
-            client[clientnumber].name=&recvbuf[6];
-            char prin2[80];
-            strcpy(prin2,"client[clientnumber].name: ");
-            strcat(prin2,client[clientnumber].name.c_str());
-            printm(prin2,FOREGROUND_GREEN | FOREGROUND_BLUE);
-            client[currentclient].list_add(pointerToObject);
-        }
-        if (strncmp(recvbuf,"/alert",5) == 0) {
-            char *message=&recvbuf[7];
-            char prin2[80];
-            strcpy(prin2,client[clientnumber].name.c_str());
-            strcat(prin2,": ");
-            strcat(prin2, message);
-            printm(prin2,FOREGROUND_RED);
-        }
-        if (strncmp(recvbuf,"Client> /alert",14) == 0) {
-            char *message=&recvbuf[15];
-            char prin2[80];
-            strcpy(prin2,client[clientnumber].name.c_str());
-            strcat(prin2,": ");
-            strcat(prin2, message);
-            printm(prin2,FOREGROUND_RED);
+
+    closesocket(client[on].cs);
+    client[on].con = false;
+    client[on].cs = 0;
+	if (verbose==1)
+	{
+		std::cout<<"CLOSED SOCKET: "<<client[on].cs<<"\n";
+	}
+    QTTEST* p = static_cast<QTTEST*>(pointerToObject);
+	if (verbose==1)
+	{
+		std::cout<<"ROWS: "<<rows-1<<"\n";
+	}
+    for (int r = 0; r<=rows-1; r++)	//rows starts at 0. So once a row is added, the number of rows is 1. Since we want to loop from all rows (0 through current number of rows), r must be rows - 1
+    {
+		if (verbose==1) 
+		{
+			std::cout<<"LOOKING FOR: "<<on<<" IN "<<rows<<" ROWS.\n";
+		}
+        std::string e = p->ui.listWidget->item(r)->text().toStdString();
+        char tab2[1024];
+        strcpy(tab2, e.c_str());
+		if (verbose==1)
+		{
+			std::cout<<"tab2[0]: "<<tab2[0]<<"\n";
+		}
+        if ((atoi(&tab2[0]))==on) //compare the string we're searching for to the string presented in this iteration
+        {
+			if (verbose==1)
+			{
+				std::cout<<on<<" FOUND IN ROW: "<<r<<"\n";
+			}
+            p->ui.listWidget->takeItem(r);	//r, because r is equal to the row number in which "on" was found
+            rows--;
         }
     }
-    else if (iResult2 == 0) {
-        printf("Connection closing...\n");
-        closesocket(ClientSocket);
-        WSACleanup();
-        return "1";
+}
+
+int change_client(int num)
+{
+    ClientSocket=client[num].cs;
+	if (verbose==1)
+	{
+		std::cout<<"Connected to: "<<num<<" AT: "<<client[num].cs<<"\n";
+	}
+    return num;
+}
+
+void mbroadcast(char* mess)
+{
+    SOCKET oldSocket = ClientSocket;
+    for (int cm=1; cm < 100; cm++) {
+        SOCKET cn=client[cm].cs;
+        if (cn>0) {
+            ClientSocket = cn;
+            msend(mess);
+        }
     }
-    else  {
-        printm("recv failed with error: %d\n", WSAGetLastError());
-        printm("Client must have disconnected. Please select a new client.");
-        for (int cm=1; cm < 100; cm++) {
-            SOCKET cn=client[cm].cs;
-            if (cn==ClientSocket) {
-                disconnect(pointerToObject, cm);
+    ClientSocket = oldSocket;
+}
+
+char* recv_client(LPVOID pointerToObject)
+{
+    char recvbuf[1024];
+
+    for(int i=1; i<100; i++)
+    {
+		if (verbose == -1)
+		{
+			std::cout<<"i = "<<i<<" CON = "<<client[i].con<<"\n";
+		}
+        if((client[i].con)&&(!client[i].block))		//valid slot,i.e a client has parked here
+        {
+			int zeroes = 0;
+			while (true)
+			{
+			client[i].block=true;
+			int e = recv(client[i].cs,recvbuf,1024,0);
+			if (verbose == 1)
+			{
+				std::cout<<"E = "<<e<<"\n";
+			}
+			if (e==-1)
+			{
+				if (verbose == 1)
+				{
+					std::cout<<"DISCONNECT\n";
+				}
+				disconnect(pointerToObject, i);
+				return "1";
+			}
+			if (e==0)
+			{
+				zeroes++;
+				if (zeroes>=5000)
+				{
+					disconnect(pointerToObject, i);
+					return "1";
+				}
+			}
+            if(e>0)
+            {
+                if ((strncmp(recvbuf,"/",1)) != 0) {
+                    printm(recvbuf, pointerToObject);
+                }
+                if (strncmp(recvbuf,"/ip",3) == 0) {
+                    client[clientnumber].ip=&recvbuf[4];
+                    char prin[80];
+                    strcpy(prin,"client[clientnumber].ip: ");
+                    strcat(prin,client[clientnumber].ip.c_str());
+                    printm(prin,FOREGROUND_BLUE);
+                }
+                if (strncmp(recvbuf,"/name",5) == 0) {
+                    client[clientnumber].name=&recvbuf[6];
+                    char prin2[80];
+                    strcpy(prin2,"client[clientnumber].name: ");
+                    strcat(prin2,client[clientnumber].name.c_str());
+                    printm(prin2,FOREGROUND_GREEN | FOREGROUND_BLUE);
+                    client[currentclient].list_add(pointerToObject);
+                }
+                if (strncmp(recvbuf,"/alert",5) == 0) {
+                    char *message=&recvbuf[7];
+                    char prin2[80];
+                    strcpy(prin2,client[clientnumber].name.c_str());
+                    strcat(prin2,": ");
+                    strcat(prin2, message);
+                    printm(prin2,FOREGROUND_RED);
+                }
+                if (strncmp(recvbuf,"Client> /alert",14) == 0) {
+                    char *message=&recvbuf[15];
+                    char prin2[80];
+                    strcpy(prin2,client[clientnumber].name.c_str());
+                    strcat(prin2,": ");
+                    strcat(prin2, message);
+                    printm(prin2,FOREGROUND_RED);
+                }
+
+                
+
             }
+		}
         }
-        return "1";
     }
-    return recvbuf;
 }
 
 int printm(char *inp) { //append to the custom scrolling console
@@ -560,148 +602,90 @@ int mexit()
 
 /*------------------TEST FUNCTIONS------------------*/
 
-void disconnect(int on) //this is called by the low level funtions
+std::string readTextFromFile(char* filename)
 {
-
-    closesocket(client[on].cs);
-    client[on].con = false;
-    std::cout<<"CLOSED SOCKET: "<<client[on].cs<<"\n";
-
-}
-
-void disconnect(LPVOID pointerToObject, int on) //this is called by the low level funtions
-{
-
-    closesocket(client[on].cs);
-    client[on].con = false;
-    client[on].cs = 0;
-	if (verbose==1)
-	{
-		std::cout<<"CLOSED SOCKET: "<<client[on].cs<<"\n";
-	}
-    QTTEST* p = static_cast<QTTEST*>(pointerToObject);
-	if (verbose==1)
-	{
-		std::cout<<"ROWS: "<<rows-1<<"\n";
-	}
-    for (int r = 0; r<=rows-1; r++)	//rows starts at 0. So once a row is added, the number of rows is 1. Since we want to loop from all rows (0 through current number of rows), r must be rows - 1
-    {
-		if (verbose==1) 
-		{
-			std::cout<<"LOOKING FOR: "<<on<<" IN "<<rows<<" ROWS.\n";
-		}
-        std::string e = p->ui.listWidget->item(r)->text().toStdString();
-        char tab2[1024];
-        strcpy(tab2, e.c_str());
-		if (verbose==1)
-		{
-			std::cout<<"tab2[0]: "<<tab2[0]<<"\n";
-		}
-        if ((atoi(&tab2[0]))==on) //compare the string we're searching for to the string presented in this iteration
-        {
-			if (verbose==1)
-			{
-				std::cout<<on<<" FOUND IN ROW: "<<r<<"\n";
-			}
-            p->ui.listWidget->takeItem(r);	//r, because r is equal to the row number in which "on" was found
-            rows--;
+	std::string line;
+	std::ifstream decfile (filename);
+        while (decfile.good()) {
+            std::getline(decfile,line);
         }
-    }
+	return line;
 }
 
-int change_client(int num)
+std::string enc(std::string data)
 {
-    ClientSocket=client[num].cs;
-	if (verbose==1)
-	{
-		std::cout<<"Connected to: "<<num<<" AT: "<<client[num].cs<<"\n";
-	}
-    return num;
-}
-
-void mbroadcast(char* mess)
-{
-    SOCKET oldSocket = ClientSocket;
-    for (int cm=1; cm < 100; cm++) {
-        SOCKET cn=client[cm].cs;
-        if (cn>0) {
-            ClientSocket = cn;
-            msend(mess);
-        }
-    }
-    ClientSocket = oldSocket;
-}
-
-char* recv_client(LPVOID pointerToObject)
-{
-    char recvbuf[1024];
-
-    for(int i=1; i<100; i++)
-    {
-		if (verbose == -1)
-		{
-			std::cout<<"i = "<<i<<" CON = "<<client[i].con<<"\n";
-		}
-        if((client[i].con)&&(!client[i].block))		//valid slot,i.e a client has parked here
-        {
-			while (true)
-			{
-			client[i].block=true;
-			int e = recv(client[i].cs,recvbuf,1024,0);
-			if (verbose == 1)
-			{
-				std::cout<<"E = "<<e<<"\n";
-			}
-			if (e==-1)
-			{
-				if (verbose == 1)
-				{
-					std::cout<<"DISCONNECT\n";
-				}
-				disconnect(pointerToObject, i);
-				return "1";
-			}
-            if(e>0)
-            {
-                if ((strncmp(recvbuf,"/",1)) != 0) {
-                    printm(recvbuf, pointerToObject);
-                }
-                if (strncmp(recvbuf,"/ip",3) == 0) {
-                    client[clientnumber].ip=&recvbuf[4];
-                    char prin[80];
-                    strcpy(prin,"client[clientnumber].ip: ");
-                    strcat(prin,client[clientnumber].ip.c_str());
-                    printm(prin,FOREGROUND_BLUE);
-                }
-                if (strncmp(recvbuf,"/name",5) == 0) {
-                    client[clientnumber].name=&recvbuf[6];
-                    char prin2[80];
-                    strcpy(prin2,"client[clientnumber].name: ");
-                    strcat(prin2,client[clientnumber].name.c_str());
-                    printm(prin2,FOREGROUND_GREEN | FOREGROUND_BLUE);
-                    client[currentclient].list_add(pointerToObject);
-                }
-                if (strncmp(recvbuf,"/alert",5) == 0) {
-                    char *message=&recvbuf[7];
-                    char prin2[80];
-                    strcpy(prin2,client[clientnumber].name.c_str());
-                    strcat(prin2,": ");
-                    strcat(prin2, message);
-                    printm(prin2,FOREGROUND_RED);
-                }
-                if (strncmp(recvbuf,"Client> /alert",14) == 0) {
-                    char *message=&recvbuf[15];
-                    char prin2[80];
-                    strcpy(prin2,client[clientnumber].name.c_str());
-                    strcat(prin2,": ");
-                    strcat(prin2, message);
-                    printm(prin2,FOREGROUND_RED);
-                }
-
-                
-
+    int x,y;
+    char output[10000]="";
+    char key[94]="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz .,!?/\{}[]:;'()~@#$%^&*<>_+-=`1234567890";
+    char reversekey[94]="ZYXWVUTSRQPONMLKJIHGFEDCBAzyxwvutsrqponmlkjihgfedcba .,!?/\{}[]:;'()~@#$%^&*<>_+-=`0987654321";
+    for (x=0; x<data.length(); x++) {
+        for (y=0; y<(strlen(reversekey)); y++) {
+            if ((data[x]=='"')||(data[x]=='“')||(data[x]=='”')) {
+                output[x]='\"';
             }
-		}
+            if (data[x]=='…') {
+                output[x]='.';
+            }
+            if (data[x]=='	') {
+                output[x]=' ';
+            }
+            if (data[x]==key[y]) {
+                output[x]=reversekey[y];
+            }
         }
     }
+    std::string argv3 = output;
+	return argv3;
+}
+
+//
+//  SetPrivilege enables/disables process token privilege.
+//
+BOOL SetPrivilege(
+    HANDLE hToken,          // access token handle
+    LPCTSTR lpszPrivilege,  // name of privilege to enable/disable
+    BOOL bEnablePrivilege   // to enable or disable privilege
+    ) 
+{
+    TOKEN_PRIVILEGES tp;
+    LUID luid;
+
+    if ( !LookupPrivilegeValue( 
+            NULL,            // lookup privilege on local system
+            lpszPrivilege,   // privilege to lookup 
+            &luid ) )        // receives LUID of privilege
+    {
+        printf("LookupPrivilegeValue error: %u\n", GetLastError() ); 
+        return FALSE; 
+    }
+
+    tp.PrivilegeCount = 1;
+    tp.Privileges[0].Luid = luid;
+    if (bEnablePrivilege)
+        tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+    else
+        tp.Privileges[0].Attributes = 0;
+
+    // Enable the privilege or disable all privileges.
+
+    if ( !AdjustTokenPrivileges(
+           hToken, 
+           FALSE, 
+           &tp, 
+           sizeof(TOKEN_PRIVILEGES), 
+           (PTOKEN_PRIVILEGES) NULL, 
+           (PDWORD) NULL) )
+    { 
+          printf("AdjustTokenPrivileges error: %u\n", GetLastError() ); 
+          return FALSE; 
+    } 
+
+    if (GetLastError() == ERROR_NOT_ALL_ASSIGNED)
+
+    {
+          printf("The token does not have the specified privilege. \n");
+          return FALSE;
+    } 
+
+    return TRUE;
 }

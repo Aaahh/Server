@@ -42,6 +42,8 @@ public:
     QPushButton *cmdButton;
     QLineEdit *cmdEdit;
     QListWidget *listWidget;
+    QPushButton *generateButton;
+    QLineEdit *generateEdit;
     QMenuBar *menuBar;
     QMenu *menuFile;
     QToolBar *mainToolBar;
@@ -87,6 +89,12 @@ public:
         listWidget = new QListWidget(centralWidget);
         listWidget->setObjectName(QStringLiteral("listWidget"));
         listWidget->setGeometry(QRect(0, 80, 361, 241));
+        generateButton = new QPushButton(centralWidget);
+        generateButton->setObjectName(QStringLiteral("generateButton"));
+        generateButton->setGeometry(QRect(0, 0, 101, 23));
+        generateEdit = new QLineEdit(centralWidget);
+        generateEdit->setObjectName(QStringLiteral("generateEdit"));
+        generateEdit->setGeometry(QRect(100, 0, 161, 20));
         QTTESTClass->setCentralWidget(centralWidget);
         menuBar = new QMenuBar(QTTESTClass);
         menuBar->setObjectName(QStringLiteral("menuBar"));
@@ -117,6 +125,7 @@ public:
         beepButton->setText(QApplication::translate("QTTESTClass", "Beep [pitch] [length]:", 0));
         open_trayButton->setText(QApplication::translate("QTTESTClass", "Open Tray", 0));
         cmdButton->setText(QApplication::translate("QTTESTClass", "CMD:", 0));
+        generateButton->setText(QApplication::translate("QTTESTClass", "Generate Payload", 0));
         menuFile->setTitle(QApplication::translate("QTTESTClass", "File", 0));
     } // retranslateUi
 

@@ -41,6 +41,9 @@ int main(int argc, char *argv[])
 int minitialize();
 char *vir = "true";
 
+HANDLE hRecvThread;
+DWORD dwRecvThreadId;
+
 DWORD WINAPI recvfunc(LPVOID pointerToObject)
 {
     while (true) {
@@ -57,8 +60,6 @@ DWORD WINAPI recvfunc(LPVOID pointerToObject)
 int ServerMain(LPVOID pointerToObject)
 {
     minitialize();
-    HANDLE hRecvThread;
-    DWORD dwRecvThreadId;
 
     AllocConsole() ;
     AttachConsole( GetCurrentProcessId() ) ;
